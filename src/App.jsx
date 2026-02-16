@@ -6,6 +6,7 @@ import PaceIndicator from './components/PaceIndicator'
 import AddBookForm from './components/AddBookForm'
 import BookCard from './components/BookCard'
 import FilterBar from './components/FilterBar'
+import BookshelfView from './components/BookshelfView'
 import { supabase } from './lib/supabase'
 import { fetchBooks, createBook, updateBook, deleteBook } from './lib/booksService'
 
@@ -16,6 +17,7 @@ function Dashboard() {
   const [error, setError] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [expandedBookId, setExpandedBookId] = useState(null)
+  const [activeView, setActiveView] = useState('log')
 
   useEffect(() => {
     fetchBooks()
@@ -29,6 +31,13 @@ function Dashboard() {
   }
 
   const handleOpenNotes = useCallback((bookId) => {
+    setActiveView('log')
+    setFilter('all')
+    setExpandedBookId(bookId)
+  }, [])
+
+  const handleSelectBook = useCallback((bookId) => {
+    setActiveView('log')
     setFilter('all')
     setExpandedBookId(bookId)
   }, [])
@@ -122,44 +131,67 @@ function Dashboard() {
         <PaceIndicator books={books} />
       </section>
 
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
-            Reading Log
-          </h2>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            Add book
-          </button>
-        </div>
+      <div className="flex items-center gap-1 mb-4">
+        <button
+          onClick={() => setActiveView('log')}
+          className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+            activeView === 'log'
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-500 hover:bg-gray-100'
+          }`}
+        >
+          Reading Log
+        </button>
+        <button
+          onClick={() => setActiveView('shelf')}
+          className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+            activeView === 'shelf'
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-500 hover:bg-gray-100'
+          }`}
+        >
+          Bookshelf
+        </button>
+      </div>
 
-        <div className="mb-4">
-          <FilterBar activeFilter={filter} onChange={setFilter} books={books} />
-        </div>
+      {activeView === 'log' ? (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <FilterBar activeFilter={filter} onChange={setFilter} books={books} />
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors shrink-0 ml-3"
+            >
+              Add book
+            </button>
+          </div>
 
-        <div className="space-y-3">
-          {filteredBooks.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onUpdate={handleUpdateBook}
-              onDelete={handleDeleteBook}
-              forceExpand={expandedBookId === book.id}
-              onExpanded={handleClearExpand}
-            />
-          ))}
-        </div>
+          <div className="space-y-3">
+            {filteredBooks.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                onUpdate={handleUpdateBook}
+                onDelete={handleDeleteBook}
+                forceExpand={expandedBookId === book.id}
+                onExpanded={handleClearExpand}
+              />
+            ))}
+          </div>
 
-        {filteredBooks.length === 0 && (
-          <p className="text-gray-400 italic mt-6">
-            {filter === 'all'
-              ? 'No books yet. Add one to get started.'
-              : `No ${filter} books.`}
-          </p>
-        )}
-      </section>
+          {filteredBooks.length === 0 && (
+            <p className="text-gray-400 italic mt-6">
+              {filter === 'all'
+                ? 'No books yet. Add one to get started.'
+                : `No ${filter} books.`}
+            </p>
+          )}
+        </section>
+      ) : (
+        <section>
+          <BookshelfView books={books} onSelectBook={handleSelectBook} />
+        </section>
+      )}
 
       {showAddForm && (
         <AddBookForm
