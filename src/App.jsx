@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AuthGate from './components/AuthGate'
+import Header from './components/Header'
+import CurrentlyReading from './components/CurrentlyReading'
+import PaceIndicator from './components/PaceIndicator'
 import AddBookForm from './components/AddBookForm'
 import BookCard from './components/BookCard'
 import FilterBar from './components/FilterBar'
@@ -12,6 +15,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [expandedBookId, setExpandedBookId] = useState(null)
 
   useEffect(() => {
     fetchBooks()
@@ -23,6 +27,15 @@ function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
   }
+
+  const handleOpenNotes = useCallback((bookId) => {
+    setFilter('all')
+    setExpandedBookId(bookId)
+  }, [])
+
+  const handleClearExpand = useCallback(() => {
+    setExpandedBookId(null)
+  }, [])
 
   const handleAddBook = async (bookData) => {
     setShowAddForm(false)
@@ -86,18 +99,10 @@ function Dashboard() {
 
   return (
     <div className="max-w-2xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-semibold">Lucidly</h1>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-400 hover:text-gray-600"
-        >
-          Sign out
-        </button>
-      </div>
+      <Header onSignOut={handleLogout} />
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex justify-between items-center">
+        <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex justify-between items-center">
           <span>Something went wrong: {error.message}</span>
           <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 text-xs underline">
             Dismiss
@@ -105,35 +110,56 @@ function Dashboard() {
         </div>
       )}
 
-      <button
-        onClick={() => setShowAddForm(true)}
-        className="mb-6 px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-      >
-        Add book
-      </button>
+      <section className="mb-8">
+        <CurrentlyReading
+          books={books}
+          onOpenNotes={handleOpenNotes}
+          onAddBook={() => setShowAddForm(true)}
+        />
+      </section>
 
-      <div className="mb-4">
-        <FilterBar activeFilter={filter} onChange={setFilter} books={books} />
-      </div>
+      <section className="mb-8">
+        <PaceIndicator books={books} />
+      </section>
 
-      <div className="space-y-3">
-        {filteredBooks.map((book) => (
-          <BookCard
-            key={book.id}
-            book={book}
-            onUpdate={handleUpdateBook}
-            onDelete={handleDeleteBook}
-          />
-        ))}
-      </div>
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+            Reading Log
+          </h2>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Add book
+          </button>
+        </div>
 
-      {filteredBooks.length === 0 && (
-        <p className="text-gray-400 italic mt-6">
-          {filter === 'all'
-            ? 'No books yet. Add one to get started.'
-            : `No ${filter} books.`}
-        </p>
-      )}
+        <div className="mb-4">
+          <FilterBar activeFilter={filter} onChange={setFilter} books={books} />
+        </div>
+
+        <div className="space-y-3">
+          {filteredBooks.map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              onUpdate={handleUpdateBook}
+              onDelete={handleDeleteBook}
+              forceExpand={expandedBookId === book.id}
+              onExpanded={handleClearExpand}
+            />
+          ))}
+        </div>
+
+        {filteredBooks.length === 0 && (
+          <p className="text-gray-400 italic mt-6">
+            {filter === 'all'
+              ? 'No books yet. Add one to get started.'
+              : `No ${filter} books.`}
+          </p>
+        )}
+      </section>
 
       {showAddForm && (
         <AddBookForm

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import BookDetail from './BookDetail'
 
 const statusStyles = {
@@ -7,8 +7,19 @@ const statusStyles = {
   abandoned: 'bg-gray-100 text-gray-500',
 }
 
-export default function BookCard({ book, onUpdate, onDelete }) {
+export default function BookCard({ book, onUpdate, onDelete, forceExpand, onExpanded }) {
   const [expanded, setExpanded] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (forceExpand) {
+      setExpanded(true)
+      if (onExpanded) onExpanded()
+      setTimeout(() => {
+        ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+    }
+  }, [forceExpand, onExpanded])
 
   const truncatedIntention =
     book.intention && book.intention.length > 100
@@ -17,17 +28,20 @@ export default function BookCard({ book, onUpdate, onDelete }) {
 
   if (expanded) {
     return (
-      <BookDetail
-        book={book}
-        onUpdate={onUpdate}
-        onDelete={onDelete}
-        onCollapse={() => setExpanded(false)}
-      />
+      <div ref={ref}>
+        <BookDetail
+          book={book}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onCollapse={() => setExpanded(false)}
+        />
+      </div>
     )
   }
 
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() => setExpanded(true)}
       className="w-full text-left border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors"
