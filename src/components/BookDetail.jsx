@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 
 const statusStyles = {
   reading: 'bg-amber-100 text-amber-800',
@@ -61,11 +61,86 @@ function EditableField({ value, onSave, type = 'text', textarea = false }) {
   )
 }
 
-export default function BookDetail({ book, onUpdate, onDelete, onCollapse }) {
+function NotesField({ value, onSave }) {
+  const [draft, setDraft] = useState(value)
+  const [saveStatus, setSaveStatus] = useState(null)
+  const timerRef = useRef(null)
+  const fadeRef = useRef(null)
+  const textareaRef = useRef(null)
+
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+
+  const doSave = async (text) => {
+    if (text === value) return
+    setSaveStatus('saving')
+    try {
+      await onSave(text)
+      setSaveStatus('saved')
+      clearTimeout(fadeRef.current)
+      fadeRef.current = setTimeout(() => setSaveStatus(null), 2000)
+    } catch {
+      setSaveStatus('error')
+    }
+  }
+
+  const handleChange = (e) => {
+    const text = e.target.value
+    setDraft(text)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => doSave(text), 1500)
+  }
+
+  const handleBlur = () => {
+    clearTimeout(timerRef.current)
+    doSave(draft)
+  }
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(timerRef.current)
+      clearTimeout(fadeRef.current)
+    }
+  }, [])
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-gray-400">Notes</p>
+        {saveStatus === 'saving' && <p className="text-xs text-gray-400">Saving...</p>}
+        {saveStatus === 'saved' && <p className="text-xs text-teal-500">Saved</p>}
+        {saveStatus === 'error' && <p className="text-xs text-red-400">Failed to save</p>}
+      </div>
+      <textarea
+        ref={textareaRef}
+        rows={6}
+        value={draft}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder="Your notes, highlights, reflections..."
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-y"
+      />
+    </div>
+  )
+}
+
+const BookDetail = forwardRef(function BookDetail({ book, onUpdate, onDelete, onCollapse }, ref) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const notesRef = useRef(null)
+
+  useImperativeHandle(ref, () => ({
+    focusNotes() {
+      notesRef.current?.querySelector('textarea')?.focus()
+    },
+  }))
 
   const handleFieldSave = (field, value) => {
     onUpdate(book.id, { [field]: value })
+  }
+
+  const handleNotesSave = (text) => {
+    return onUpdate(book.id, { notes: text })
   }
 
   const handleStatusChange = (newStatus) => {
@@ -148,13 +223,8 @@ export default function BookDetail({ book, onUpdate, onDelete, onCollapse }) {
         )}
       </div>
 
-      <div>
-        <p className="text-xs text-gray-400 mb-1">Notes</p>
-        <EditableField
-          value={book.notes || ''}
-          onSave={(v) => handleFieldSave('notes', v)}
-          textarea
-        />
+      <div ref={notesRef}>
+        <NotesField value={book.notes || ''} onSave={handleNotesSave} />
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
@@ -221,4 +291,6 @@ export default function BookDetail({ book, onUpdate, onDelete, onCollapse }) {
       </div>
     </div>
   )
-}
+})
+
+export default BookDetail

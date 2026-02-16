@@ -9,14 +9,18 @@ const statusStyles = {
 
 export default function BookCard({ book, onUpdate, onDelete, forceExpand, onExpanded }) {
   const [expanded, setExpanded] = useState(false)
-  const ref = useRef(null)
+  const containerRef = useRef(null)
+  const detailRef = useRef(null)
 
   useEffect(() => {
     if (forceExpand) {
       setExpanded(true)
       if (onExpanded) onExpanded()
       setTimeout(() => {
-        ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setTimeout(() => {
+          detailRef.current?.focusNotes()
+        }, 100)
       }, 50)
     }
   }, [forceExpand, onExpanded])
@@ -28,8 +32,9 @@ export default function BookCard({ book, onUpdate, onDelete, forceExpand, onExpa
 
   if (expanded) {
     return (
-      <div ref={ref}>
+      <div ref={containerRef} id={`book-${book.id}`}>
         <BookDetail
+          ref={detailRef}
           book={book}
           onUpdate={onUpdate}
           onDelete={onDelete}
@@ -41,7 +46,8 @@ export default function BookCard({ book, onUpdate, onDelete, forceExpand, onExpa
 
   return (
     <button
-      ref={ref}
+      ref={containerRef}
+      id={`book-${book.id}`}
       type="button"
       onClick={() => setExpanded(true)}
       className="w-full text-left border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors"
